@@ -14,7 +14,12 @@
       <h1>Mon profil</h1>
       <p><strong>Email :</strong> <span id="userEmail"></span></p>
       <p><strong>Prénom :</strong> <span id="usernameDisplay"></span></p>
-      <p><strong>Surnom :</strong> <span id="nicknameDisplay"></span></p>
+      <p><strong>Surnom :</strong>
+        <span id="nicknameDisplay"></span>
+        <input type="text" id="nicknameInput" placeholder="Entrer un surnom" style="display: none; margin-left: 10px;">
+        <button id="editNicknameBtn">Modifier ✏️</button>
+        <button id="saveNicknameBtn" style="display: none;">Sauvegarder 💾</button>
+      </p>
       <p><strong>Nombre de points posés :</strong> <span id="pointCount">...</span></p>
       <p><strong>Nombre de pays visités :</strong> <span id="countryCount">...</span></p>
       <button id="toggleCountryListBtn">Afficher la liste des pays</button>

@@ -14,10 +14,11 @@ import {
   collection,
   query,
   where,
-  getDocs
+  getDocs,
+  updateDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// 🔧 Config Firebase
+// Config Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyApRfuzuKLuDGdffLq71L-O4hszZS5CwHE",
   authDomain: "devincitrip-ea0a9.firebaseapp.com",
@@ -36,14 +37,19 @@ const countryCountSpan = document.getElementById("countryCount");
 const countryList = document.getElementById("countryList");
 const toggleBtn = document.getElementById("toggleCountryListBtn");
 
-// 👁️ Bouton Afficher/Masquer
+const nicknameDisplay = document.getElementById("nicknameDisplay");
+const nicknameInput = document.getElementById("nicknameInput");
+const editNicknameBtn = document.getElementById("editNicknameBtn");
+const saveNicknameBtn = document.getElementById("saveNicknameBtn");
+
+// Bouton Afficher/Masquer liste pays
 toggleBtn.addEventListener("click", () => {
   const visible = countryList.style.display === "block";
   countryList.style.display = visible ? "none" : "block";
   toggleBtn.textContent = visible ? "Afficher la liste des pays" : "Masquer la liste des pays";
 });
 
-// 🔐 Vérification utilisateur
+// Authentification utilisateur
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
     window.location.href = "index.html";
@@ -53,11 +59,13 @@ onAuthStateChanged(auth, async (user) => {
   document.getElementById("userEmail").textContent = user.email;
 
   try {
-    const userDoc = await getDoc(doc(db, "users", user.uid));
+    const userDocRef = doc(db, "users", user.uid);
+    const userDoc = await getDoc(userDocRef);
+
     if (userDoc.exists()) {
       const data = userDoc.data();
       document.getElementById("usernameDisplay").textContent = data.username;
-      document.getElementById("nicknameDisplay").textContent = data.nickname || "—";
+      nicknameDisplay.textContent = data.nickname || "—";
     }
 
     const q = query(collection(db, "points"), where("userId", "==", user.uid));
@@ -84,15 +92,44 @@ onAuthStateChanged(auth, async (user) => {
 
     const sortedCountries = Array.from(countries).sort();
     countryCountSpan.textContent = sortedCountries.length;
-
-    countryList.innerHTML = sortedCountries.map(p => `<li>${p}</li>`).join("");
+    countryList.innerHTML = sortedCountries.map(c => `<li>${c}</li>`).join("");
 
   } catch (error) {
     console.error("Erreur récupération des données :", error);
   }
 });
 
-// 🔐 Changement mot de passe
+// ✏️ Modifier le surnom
+editNicknameBtn.addEventListener("click", () => {
+  nicknameInput.value = nicknameDisplay.textContent !== "—" ? nicknameDisplay.textContent : "";
+  nicknameDisplay.style.display = "none";
+  nicknameInput.style.display = "inline";
+  editNicknameBtn.style.display = "none";
+  saveNicknameBtn.style.display = "inline";
+});
+
+// 💾 Enregistrer le surnom
+saveNicknameBtn.addEventListener("click", async () => {
+  const newNickname = nicknameInput.value.trim();
+  const user = auth.currentUser;
+  if (!user) return;
+
+  try {
+    const userRef = doc(db, "users", user.uid);
+    await updateDoc(userRef, { nickname: newNickname });
+
+    nicknameDisplay.textContent = newNickname || "—";
+    nicknameDisplay.style.display = "inline";
+    nicknameInput.style.display = "none";
+    editNicknameBtn.style.display = "inline";
+    saveNicknameBtn.style.display = "none";
+  } catch (e) {
+    console.error("Erreur mise à jour surnom :", e);
+    alert("Erreur lors de la mise à jour du surnom.");
+  }
+});
+
+// 🔐 Changer mot de passe
 document.getElementById("changePasswordBtn").addEventListener("click", () => {
   const currentPassword = document.getElementById("currentPassword").value;
   const newPassword = document.getElementById("newPassword").value;
@@ -119,14 +156,14 @@ document.getElementById("changePasswordBtn").addEventListener("click", () => {
     });
 });
 
-// Déconnexion
+// 🔓 Déconnexion
 document.getElementById("logoutBtn").addEventListener("click", () => {
   signOut(auth).then(() => {
     window.location.href = "index.html";
   });
 });
 
-// Navigation
+// 🔁 Navigation
 window.openCommunity = () => window.location.href = "communaute.html";
 window.openMain = () => window.location.href = "main.html";
 window.openProfile = () => window.location.href = "profil.html";
