@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DeVinciTrip - Carte</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="icon" type="image/png" href="logo_sf.png" />
+  <link rel="manifest" href="manifest.json" />
+</head>
+<body>
+
+  <div id="map"></div>
+
+  <!-- Modale pour ajout de point -->
+  <div id="modalOverlay" class="modal-overlay hidden">
+    <div class="modal-box">
+      <h3>Ajouter un point</h3>
+      <input type="text" id="pointTitle" placeholder="Titre du lieu" />
+      <input type="file" id="pointImage" accept="image/*" />
+      <div class="modal-actions">
+        <button id="cancelBtn">Annuler</button>
+        <button id="confirmBtn">Valider</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-bar">
+    <button onclick="openCommunity()">👥</button>
+    <button onclick="addPoint()">➕</button>
+    <button onclick="openProfile()">👤</button>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script type="module" src="main.js"></script>
+</body>
+</html>

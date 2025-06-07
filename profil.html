@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Profil - DeVinciTrip</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" type="image/png" href="logo_sf.png" />
+  <link rel="manifest" href="manifest.json" />
+</head>
+<body>
+  <div class="scrollable">
+      <div class="container">
+        <h1>Mon profil</h1>
+        <p><strong>Email :</strong> <span id="userEmail"></span></p>
+        <p><strong>Nom d'utilisateur :</strong> <span id="usernameDisplay"></span></p>
+
+        <h3>Changer de mot de passe</h3>
+        <input type="password" id="currentPassword" placeholder="Mot de passe actuel" />
+        <input type="password" id="newPassword" placeholder="Nouveau mot de passe" />
+        <button id="changePasswordBtn">Changer le mot de passe</button>
+        <p id="passwordMessage"></p>
+
+        <hr style="margin: 2rem 0;">
+
+        <button id="logoutBtn" style="background-color: red;">Se déconnecter</button>
+      </div>
+  </div>
+
+  <div class="bottom-bar">
+    <button onclick="openCommunity()">👥</button>
+    <button onclick="openMain()">🏠</button>
+    <button onclick="openProfile()">👤</button>
+  </div>
+
+  <script type="module" src="profil.js"></script>
+</body>
+</html>
