@@ -31,6 +31,7 @@ document.getElementById("signupBtn").addEventListener("click", async () => {
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value;
   const message = document.getElementById("signupMessage");
+  const nickname = document.getElementById("nickname").value.trim();
 
   if (!username || !email || !password) {
     message.textContent = "Tous les champs sont obligatoires.";
@@ -53,7 +54,8 @@ document.getElementById("signupBtn").addEventListener("click", async () => {
 
     await setDoc(doc(db, "users", user.uid), {
       username: username,
-      email: email
+      email: email,
+      ...(nickname && { nickname: nickname })
     });
 
     message.textContent = "Inscription réussie ! Redirection...";

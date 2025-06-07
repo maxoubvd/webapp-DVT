@@ -10,10 +10,9 @@ import {
   getDocs,
   doc,
   getDoc,
+  deleteDoc,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-// ⚠️ Aucune import Firebase Storage ici, on utilise Cloudinary !
 
 // Config Firebase
 const firebaseConfig = {
@@ -30,8 +29,8 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 // Cloudinary config
-const CLOUD_NAME = "dap4sluh4"; 
-const UPLOAD_PRESET = "devincitrip"; 
+const CLOUD_NAME = "dap4sluh4";
+const UPLOAD_PRESET = "devincitrip";
 
 // Carte Leaflet
 const map = L.map('map').setView([48.8584, 2.2945], 2);
@@ -39,7 +38,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; OpenStreetMap contributors'
 }).addTo(map);
 
-// Vérifier connexion
+// Authentification
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
     window.location.href = "index.html";
@@ -48,19 +47,17 @@ onAuthStateChanged(auth, async (user) => {
   await afficherTousLesPoints();
 });
 
-// Ouverture modale
+// Modal gestion
 window.addPoint = () => {
   document.getElementById("modalOverlay").classList.remove("hidden");
 };
 
-// Annuler
 document.getElementById("cancelBtn").addEventListener("click", () => {
   document.getElementById("modalOverlay").classList.add("hidden");
   document.getElementById("pointTitle").value = "";
   document.getElementById("pointImage").value = "";
 });
 
-// Ajouter le point
 document.getElementById("confirmBtn").addEventListener("click", async () => {
   const title = document.getElementById("pointTitle").value.trim();
   const imageFile = document.getElementById("pointImage").files[0];
@@ -89,24 +86,32 @@ document.getElementById("confirmBtn").addEventListener("click", async () => {
     const longitude = position.coords.longitude;
 
     let photoURL = null;
-
     if (imageFile) {
-      const compressedBlob = await compresserImage(imageFile, 500 * 1024); // max 500 Ko
+      const compressedBlob = await compresserImage(imageFile, 500 * 1024);
       photoURL = await uploadToCloudinary(compressedBlob);
     }
 
-    await addDoc(collection(db, "points"), {
+    const pointRef = await addDoc(collection(db, "points"), {
       userId: user.uid,
-      username: username,
-      title: title,
-      latitude: latitude,
-      longitude: longitude,
-      photoURL: photoURL,
+      username,
+      title,
+      latitude,
+      longitude,
+      photoURL,
       createdAt: serverTimestamp()
     });
 
     alert("Point enregistré !");
-    afficherMarqueur({ latitude, longitude, title, username, createdAt: new Date(), photoURL });
+    afficherMarqueur({
+      id: pointRef.id,
+      userId: user.uid,
+      username,
+      title,
+      latitude,
+      longitude,
+      photoURL,
+      createdAt: new Date()
+    });
   }, (error) => {
     alert("Erreur de géolocalisation : " + error.message);
   });
@@ -127,33 +132,6 @@ async function uploadToCloudinary(blob) {
   return data.secure_url;
 }
 
-// Affichage des points
-async function afficherTousLesPoints() {
-  const snapshot = await getDocs(collection(db, "points"));
-  snapshot.forEach(docSnap => {
-    const data = docSnap.data();
-    afficherMarqueur(data);
-  });
-}
-
-// Afficher un marqueur
-function afficherMarqueur(data) {
-  const date = data.createdAt?.toDate?.() ?? new Date();
-  let popup = `
-    <strong>${data.title}</strong><br/>
-    Par : ${data.username}<br/>
-    Le : ${date.toLocaleDateString()} à ${date.toLocaleTimeString()}<br/>
-  `;
-
-  if (data.photoURL) {
-    popup += `<img src="${data.photoURL}" alt="photo" style="width:100%;max-width:250px;margin-top:10px;border-radius:5px;">`;
-  }
-
-  L.marker([data.latitude, data.longitude])
-    .addTo(map)
-    .bindPopup(popup);
-}
-
 // Compression image
 async function compresserImage(file, tailleMax) {
   return new Promise((resolve) => {
@@ -163,9 +141,7 @@ async function compresserImage(file, tailleMax) {
       img.onload = function () {
         const canvas = document.createElement("canvas");
         const ctx = canvas.getContext("2d");
-
-        const MAX_WIDTH = 1024;
-        const scale = Math.min(1, MAX_WIDTH / img.width);
+        const scale = Math.min(1, 1024 / img.width);
         canvas.width = img.width * scale;
         canvas.height = img.height * scale;
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
@@ -177,7 +153,6 @@ async function compresserImage(file, tailleMax) {
               quality -= 0.1;
               compress();
             } else {
-              console.log("Taille finale image : ", blob.size);
               resolve(blob);
             }
           }, 'image/jpeg', quality);
@@ -190,31 +165,86 @@ async function compresserImage(file, tailleMax) {
   });
 }
 
+// Affichage des points
+async function afficherTousLesPoints() {
+  const snapshot = await getDocs(collection(db, "points"));
+  snapshot.forEach(docSnap => {
+    const data = docSnap.data();
+    afficherMarqueur({ ...data, id: docSnap.id });
+  });
+}
+
+// Afficher un marqueur
+function afficherMarqueur(data) {
+  const date = data.createdAt?.toDate?.() ?? new Date();
+
+  let popup = `
+    <strong>${data.title}</strong><br/>
+    Par : ${data.username}<br/>
+    Le : ${date.toLocaleDateString()} à ${date.toLocaleTimeString()}<br/>
+  `;
+
+  if (data.photoURL) {
+    popup += `<img src="${data.photoURL}" alt="photo" style="width:100%;max-width:250px;margin-top:10px;border-radius:5px;"><br/>`;
+  }
+
+  const user = auth.currentUser;
+  if (user && data.userId === user.uid) {
+    popup += `<button class="delete-btn" data-id="${data.id}">🗑 Supprimer</button>`;
+  }
+
+  const marker = L.marker([data.latitude, data.longitude]).addTo(map).bindPopup(popup);
+
+  marker.on("popupopen", () => {
+    const deleteBtn = document.querySelector(".delete-btn");
+    if (deleteBtn) {
+      deleteBtn.addEventListener("click", async () => {
+        const confirmDelete = confirm("Supprimer ce point ?");
+        if (confirmDelete) {
+          await supprimerPoint(deleteBtn.dataset.id, marker);
+        }
+      });
+    }
+  });
+}
+
+// Suppression Firestore + carte
+async function supprimerPoint(pointId, marker) {
+  try {
+    await deleteDoc(doc(db, "points", pointId));
+    map.removeLayer(marker);
+    alert("Point supprimé !");
+  } catch (err) {
+    console.error("Erreur suppression :", err);
+    alert("Erreur lors de la suppression.");
+  }
+}
+
 // Navigation
 window.openCommunity = () => window.location.href = "communaute.html";
 window.openProfile = () => window.location.href = "profil.html";
 
-
+// Installation PWA
 let deferredPrompt;
 
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
 
-  // Crée un bouton custom (à toi de l’ajouter dans le HTML)
   const btn = document.createElement("button");
-  btn.textContent = "📲 Installer l'application";
-  btn.style.position = "fixed";
-  btn.style.bottom = "70px";
-  btn.style.left = "50%";
-  btn.style.transform = "translateX(-50%)";
-  btn.style.padding = "10px 20px";
-  btn.style.backgroundColor = "#0e4968";
-  btn.style.color = "white";
-  btn.style.border = "none";
-  btn.style.borderRadius = "10px";
-  btn.style.zIndex = "10000";
-
+  btn.textContent = "Installer l'application";
+  Object.assign(btn.style, {
+    position: "fixed",
+    bottom: "70px",
+    left: "50%",
+    transform: "translateX(-50%)",
+    padding: "10px 20px",
+    backgroundColor: "#0e4968",
+    color: "white",
+    border: "none",
+    borderRadius: "10px",
+    zIndex: "10000"
+  });
   document.body.appendChild(btn);
 
   btn.addEventListener('click', async () => {
@@ -226,11 +256,11 @@ window.addEventListener('beforeinstallprompt', (e) => {
   });
 });
 
-
+// Enregistrement service worker
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('service-worker.js')
-      .then(reg => console.log("✅ SW enregistré", reg.scope))
-      .catch(err => console.error("❌ SW erreur", err));
+      .then(reg => console.log("SW enregistré", reg.scope))
+      .catch(err => console.error("SW erreur", err));
   });
 }

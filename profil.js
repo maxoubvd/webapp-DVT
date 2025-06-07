@@ -10,9 +10,14 @@ import {
 import {
   getFirestore,
   doc,
-  getDoc
+  getDoc,
+  collection,
+  query,
+  where,
+  getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+// 🔧 Config Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyApRfuzuKLuDGdffLq71L-O4hszZS5CwHE",
   authDomain: "devincitrip-ea0a9.firebaseapp.com",
@@ -26,6 +31,19 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+const pointCountSpan = document.getElementById("pointCount");
+const countryCountSpan = document.getElementById("countryCount");
+const countryList = document.getElementById("countryList");
+const toggleBtn = document.getElementById("toggleCountryListBtn");
+
+// 👁️ Bouton Afficher/Masquer
+toggleBtn.addEventListener("click", () => {
+  const visible = countryList.style.display === "block";
+  countryList.style.display = visible ? "none" : "block";
+  toggleBtn.textContent = visible ? "Afficher la liste des pays" : "Masquer la liste des pays";
+});
+
+// 🔐 Vérification utilisateur
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
     window.location.href = "index.html";
@@ -37,14 +55,44 @@ onAuthStateChanged(auth, async (user) => {
   try {
     const userDoc = await getDoc(doc(db, "users", user.uid));
     if (userDoc.exists()) {
-      const username = userDoc.data().username;
-      document.getElementById("usernameDisplay").textContent = username;
+      const data = userDoc.data();
+      document.getElementById("usernameDisplay").textContent = data.username;
+      document.getElementById("nicknameDisplay").textContent = data.nickname || "—";
     }
+
+    const q = query(collection(db, "points"), where("userId", "==", user.uid));
+    const snapshot = await getDocs(q);
+
+    pointCountSpan.textContent = snapshot.size;
+
+    const countries = new Set();
+
+    for (const docSnap of snapshot.docs) {
+      const point = docSnap.data();
+      const lat = point.latitude;
+      const lng = point.longitude;
+
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
+        const json = await res.json();
+        const country = json.address?.country;
+        if (country) countries.add(country);
+      } catch (e) {
+        console.warn("Erreur géocodage inverse", e);
+      }
+    }
+
+    const sortedCountries = Array.from(countries).sort();
+    countryCountSpan.textContent = sortedCountries.length;
+
+    countryList.innerHTML = sortedCountries.map(p => `<li>${p}</li>`).join("");
+
   } catch (error) {
-    console.error("Erreur récupération pseudo :", error);
+    console.error("Erreur récupération des données :", error);
   }
 });
 
+// 🔐 Changement mot de passe
 document.getElementById("changePasswordBtn").addEventListener("click", () => {
   const currentPassword = document.getElementById("currentPassword").value;
   const newPassword = document.getElementById("newPassword").value;
@@ -71,12 +119,14 @@ document.getElementById("changePasswordBtn").addEventListener("click", () => {
     });
 });
 
+// Déconnexion
 document.getElementById("logoutBtn").addEventListener("click", () => {
   signOut(auth).then(() => {
     window.location.href = "index.html";
   });
 });
 
+// Navigation
 window.openCommunity = () => window.location.href = "communaute.html";
 window.openMain = () => window.location.href = "main.html";
 window.openProfile = () => window.location.href = "profil.html";

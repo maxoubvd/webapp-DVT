@@ -9,18 +9,24 @@
   <link rel="manifest" href="manifest.json" />
 </head>
 <body>
-    <div class="scrollable">
-        <div class="container">
-            <h1>Communauté</h1>
-            <ul id="userList"></ul>
+  <div class="scrollable">
+    <div class="container">
+      <h2>Statistiques de vos trippeurs</h2>
+      <p id="stats"></p>
+      <button id="toggleCountriesBtn">Afficher la liste des pays</button>
+      <div id="countriesList" style="display: none; margin-top: 10px;"></div>
 
-            <div id="userPoints" class="hidden">
-            <h2>Points de <span id="selectedUsername"></span></h2>
-            <ul id="pointsList"></ul>
-            <button onclick="goBack()">⬅ Retour</button>
-            </div>
-        </div>
+      <input type="text" id="searchInput" placeholder="🔍 Rechercher un utilisateur..." style="width: 100%; padding: 10px; margin: 1rem 0; font-size: 1rem;" />
+
+      <ul id="userList"></ul>
+
+      <div id="userPoints" class="hidden">
+        <h3>Points de <span id="selectedUsername"></span></h3>
+        <ul id="pointsList"></ul>
+        <button onclick="goBack()">⬅ Retour</button>
+      </div>
     </div>
+  </div>
 
   <div class="bottom-bar">
     <button onclick="window.location.href='communaute.html'">👥</button>

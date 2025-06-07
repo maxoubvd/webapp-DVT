@@ -57,6 +57,26 @@ html {
   cursor: pointer;
 }
 
+.delete-btn {
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 5px;
+  margin-top: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.delete-btn:hover {
+  background-color: #c0392b;
+}
+
+#userList li {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #ddd;
+}
+
 input {
   display: block;
   width: 100%;
