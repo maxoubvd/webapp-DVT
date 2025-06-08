@@ -71,7 +71,10 @@ document.getElementById("cancelBtn").addEventListener("click", () => {
 
 document.getElementById("confirmBtn").addEventListener("click", async () => {
   const title = document.getElementById("pointTitle").value.trim();
-  const imageFile = document.getElementById("pointImage").files[0];
+  const file1 = document.getElementById("chooseImage").files[0];
+  const file2 = document.getElementById("takeImage").files[0];
+  const imageFile = file1 || file2;
+
   const modal = document.getElementById("modalOverlay");
 
   if (!title) {
@@ -81,7 +84,8 @@ document.getElementById("confirmBtn").addEventListener("click", async () => {
 
   modal.classList.add("hidden");
   document.getElementById("pointTitle").value = "";
-  document.getElementById("pointImage").value = "";
+  document.getElementById("chooseImage").value = "";
+  document.getElementById("takeImage").value = "";
 
   if (!navigator.geolocation) {
     alert("Géolocalisation non disponible");
@@ -275,3 +279,11 @@ if ('serviceWorker' in navigator) {
       .catch(err => console.error("SW erreur", err));
   });
 }
+
+document.getElementById("chooseImageBtn").addEventListener("click", () => {
+  document.getElementById("chooseImage").click();
+});
+
+document.getElementById("takeImageBtn").addEventListener("click", () => {
+  document.getElementById("takeImage").click();
+});
