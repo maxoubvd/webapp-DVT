@@ -33,7 +33,18 @@ const CLOUD_NAME = "dap4sluh4";
 const UPLOAD_PRESET = "devincitrip";
 
 // Carte Leaflet
-const map = L.map('map').setView([48.8584, 2.2945], 2);
+const map = L.map('map', {
+  minZoom: 2,
+  maxZoom: 18,
+  zoomSnap: 0.5,
+  worldCopyJump: false,
+  maxBounds: [
+    [-85, -180],
+    [85, 180]
+  ],
+  maxBoundsViscosity: 1.0
+}).setView([46.6031, 1.8883], 3);
+
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; OpenStreetMap contributors'
 }).addTo(map);
