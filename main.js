@@ -10,6 +10,7 @@ import {
   getDocs,
   doc,
   getDoc,
+  setDoc,
   deleteDoc,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -221,13 +222,85 @@ function afficherMarqueur(data) {
   }
 
   if (isCurrentUser) {
-    popup += `<button class="delete-btn" data-id="${data.id}">🗑 Supprimer</button>`;
+    popup += `
+      <div style="
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 10px;
+      ">
+        ${isCurrentUser ? `
+          <button class="delete-btn" data-id="${data.id}" style="
+            background-color: #d9534f;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 5px 10px;
+            font-size: 14px;
+            cursor: pointer;
+          ">🗑 Supprimer</button>
+        ` : `<div></div>`}
+        
+        <div style="
+          display: flex;
+          justify-content: flex-end;
+          align-items: center;
+          margin-top: 10px;
+          padding-right: 5px;
+          font-size: 16px;
+        ">
+          <button class="like-btn" data-id="${data.id}" style="
+            all: unset;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+            margin-right: 4px;
+          ">🤍</button>
+          <span class="like-count" id="like-count-${data.id}" style="
+            line-height: 1;
+          ">0</span>
+        </div>
+      </div>
+    `;
+  }
+  else{
+    popup += `
+    <div style="
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      margin-top: 10px;
+      padding-right: 5px;
+      font-size: 16px;
+    ">
+      <button class="like-btn" data-id="${data.id}" style="
+        all: unset;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        cursor: pointer;
+        margin-right: 4px;
+      ">🤍</button>
+      <span class="like-count" id="like-count-${data.id}" style="
+        line-height: 1;
+      ">0</span>
+    </div>
+  `;
+
   }
 
   const marker = L.marker([data.latitude, data.longitude], { icon }).addTo(map).bindPopup(popup);
 
-  marker.on("popupopen", () => {
-    const deleteBtn = document.querySelector(".delete-btn");
+  marker.on("popupopen", async () => {
+    const popupEl = marker.getPopup().getElement();
+    const deleteBtn = popupEl.querySelector(".delete-btn");
+    const likeBtn = popupEl.querySelector(".like-btn");
+    const likeCountEl = popupEl.querySelector(`#like-count-${data.id}`);
+    const img = popupEl.querySelector(".popup-img");
+
     if (deleteBtn) {
       deleteBtn.addEventListener("click", async () => {
         if (confirm("Supprimer ce point ?")) {
@@ -236,13 +309,41 @@ function afficherMarqueur(data) {
       });
     }
 
-    const img = document.querySelector(".popup-img");
     if (img) {
       img.addEventListener("click", () => {
         const modal = document.getElementById("imageModal");
         const fullImg = document.getElementById("fullImage");
         fullImg.src = img.src;
         modal.classList.remove("hidden");
+      });
+    }
+
+    // Gestion des likes
+    if (user && likeBtn && likeCountEl) {
+      const pointRef = doc(db, "points", data.id);
+      const likesRef = collection(pointRef, "likes");
+      const userLikeRef = doc(likesRef, user.uid);
+
+      // Afficher compteur actuel
+      const snapshot = await getDocs(likesRef);
+      likeCountEl.textContent = snapshot.size;
+
+      // Afficher état initial
+      const likeDoc = await getDoc(userLikeRef);
+      likeBtn.textContent = likeDoc.exists() ? "❤️" : "🤍";
+
+      likeBtn.addEventListener("click", async () => {
+        const likeDocNow = await getDoc(userLikeRef);
+        if (likeDocNow.exists()) {
+          await deleteDoc(userLikeRef);
+          likeBtn.textContent = "🤍";
+        } else {
+          await setDoc(userLikeRef, { timestamp: serverTimestamp() });
+          likeBtn.textContent = "❤️";
+        }
+
+        const updatedSnapshot = await getDocs(likesRef);
+        likeCountEl.textContent = updatedSnapshot.size;
       });
     }
   });
@@ -334,7 +435,7 @@ document.getElementById("exploreBtn").addEventListener("click", async () => {
     const randomDoc = docs[Math.floor(Math.random() * docs.length)];
     const data = randomDoc.data();
 
-    map.setView([data.latitude+0.5, data.longitude], 7, { animate: true });
+    map.setView([data.latitude+1, data.longitude], 7, { animate: true });
 
     // Ouvrir le popup du point correspondant
     setTimeout(() => {
