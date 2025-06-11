@@ -42,8 +42,8 @@ const map = L.map('map', {
   maxBoundsViscosity: 1.0
 }).setView([46.6031, 1.8883], 3);
 
-const blueIcon = new L.Icon({
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+const goldIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-gold.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
   iconSize: [25, 41],
   iconAnchor: [12, 41],
@@ -60,8 +60,8 @@ const redIcon = new L.Icon({
   shadowSize: [41, 41]
 });
 
-const greenIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
+const blueIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
   iconSize: [25, 41],
   iconAnchor: [12, 41],
@@ -203,9 +203,9 @@ function afficherMarqueur(data) {
   const user = auth.currentUser;
   const isCurrentUser = user && data.userId === user.uid;
 
-  let icon = blueIcon;
+  let icon = goldIcon;
   if (data.type === "association") {
-    icon = greenIcon;
+    icon = blueIcon;
   } else if (isCurrentUser) {
     icon = redIcon;
   }
