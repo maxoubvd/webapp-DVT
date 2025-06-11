@@ -221,81 +221,50 @@ function afficherMarqueur(data) {
     popup += `<img src="${data.photoURL}" class="popup-img" style="width:100%;max-width:250px;margin-top:10px;border-radius:5px;cursor:zoom-in;"><br/>`;
   }
 
-  if (isCurrentUser) {
-    popup += `
-      <div style="
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-top: 10px;
-      ">
-        ${isCurrentUser ? `
-          <button class="delete-btn" data-id="${data.id}" style="
-            background-color: #d9534f;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            padding: 5px 10px;
-            font-size: 14px;
-            cursor: pointer;
-          ">🗑 Supprimer</button>
-        ` : `<div></div>`}
-        
-        <div style="
-          display: flex;
-          justify-content: flex-end;
-          align-items: center;
-          margin-top: 10px;
-          padding-right: 5px;
-          font-size: 16px;
-        ">
-          <button class="like-btn" data-id="${data.id}" style="
-            all: unset;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            cursor: pointer;
-            margin-right: 4px;
-          ">🤍</button>
-          <span class="like-count" id="like-count-${data.id}" style="
-            line-height: 1;
-          ">0</span>
-        </div>
-      </div>
-    `;
-  }
-  else{
-    popup += `
+  popup += `
     <div style="
       display: flex;
-      justify-content: flex-end;
+      justify-content: space-between;
       align-items: center;
       margin-top: 10px;
-      padding-right: 5px;
-      font-size: 16px;
     ">
-      <button class="like-btn" data-id="${data.id}" style="
-        all: unset;
-        display: inline-flex;
+      ${isCurrentUser ? `
+        <button class="delete-btn" data-id="${data.id}" style="
+          background-color: #d9534f;
+          color: white;
+          border: none;
+          border-radius: 5px;
+          padding: 5px 10px;
+          font-size: 14px;
+          cursor: pointer;
+        ">🗑 Supprimer</button>
+      ` : `<div></div>`}
+
+      <div style="
+        display: flex;
         align-items: center;
-        justify-content: center;
-        font-size: 20px;
-        cursor: pointer;
-        margin-right: 4px;
-      ">🤍</button>
-      <span class="like-count" id="like-count-${data.id}" style="
-        line-height: 1;
-      ">0</span>
+        padding-right: 5px;
+        font-size: 16px;
+      ">
+        <button class="like-btn" data-id="${data.id}" style="
+          all: unset;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 20px;
+          cursor: pointer;
+          margin-right: 4px;
+        ">🤍</button>
+        <span class="like-count" id="like-count-${data.id}" style="line-height: 1;">0</span>
+      </div>
     </div>
   `;
-
-  }
 
   const marker = L.marker([data.latitude, data.longitude], { icon }).addTo(map).bindPopup(popup);
 
   marker.on("popupopen", async () => {
     const popupEl = marker.getPopup().getElement();
+    const user = auth.currentUser;
     const deleteBtn = popupEl.querySelector(".delete-btn");
     const likeBtn = popupEl.querySelector(".like-btn");
     const likeCountEl = popupEl.querySelector(`#like-count-${data.id}`);
@@ -318,36 +287,54 @@ function afficherMarqueur(data) {
       });
     }
 
-    // Gestion des likes
+    // ✅ Gestion des likes sécurisée
     if (user && likeBtn && likeCountEl) {
       const pointRef = doc(db, "points", data.id);
       const likesRef = collection(pointRef, "likes");
       const userLikeRef = doc(likesRef, user.uid);
 
-      // Afficher compteur actuel
-      const snapshot = await getDocs(likesRef);
-      likeCountEl.textContent = snapshot.size;
+      try {
+        // Afficher compteur de likes
+        const snapshot = await getDocs(likesRef);
+        likeCountEl.textContent = snapshot.size;
+        console.log(`Point ${data.id} a ${snapshot.size} like(s)`);
 
-      // Afficher état initial
-      const likeDoc = await getDoc(userLikeRef);
-      likeBtn.textContent = likeDoc.exists() ? "❤️" : "🤍";
+        // Afficher état actuel du like pour l'utilisateur
+        const likeDoc = await getDoc(userLikeRef);
+        likeBtn.textContent = likeDoc.exists() ? "❤️" : "🤍";
+        console.log(`Like actuel pour ${user.uid} :`, likeDoc.exists());
 
-      likeBtn.addEventListener("click", async () => {
-        const likeDocNow = await getDoc(userLikeRef);
-        if (likeDocNow.exists()) {
-          await deleteDoc(userLikeRef);
-          likeBtn.textContent = "🤍";
-        } else {
-          await setDoc(userLikeRef, { timestamp: serverTimestamp() });
-          likeBtn.textContent = "❤️";
-        }
+        // Gestion du clic
+        likeBtn.addEventListener("click", async () => {
+          try {
+            const current = await getDoc(userLikeRef);
+            if (current.exists()) {
+              console.log("Suppression du like...");
+              await deleteDoc(userLikeRef);
+              likeBtn.textContent = "🤍";
+            } else {
+              console.log("Ajout du like...");
+              await setDoc(userLikeRef, { timestamp: serverTimestamp() });
+              likeBtn.textContent = "❤️";
+            }
 
-        const updatedSnapshot = await getDocs(likesRef);
-        likeCountEl.textContent = updatedSnapshot.size;
-      });
+            const updatedSnapshot = await getDocs(likesRef);
+            likeCountEl.textContent = updatedSnapshot.size;
+            console.log("Nouveau compteur :", updatedSnapshot.size);
+          } catch (likeErr) {
+            console.error("Erreur lors du clic sur le like :", likeErr);
+            alert("Erreur lors du traitement du like : " + likeErr.message);
+          }
+        });
+
+      } catch (err) {
+        console.error("Erreur de gestion des likes :", err);
+        alert("Une erreur est survenue lors de l'enregistrement du like : " + err.message);
+      }
     }
   });
 }
+
 
 
 async function supprimerPoint(pointId, marker) {
