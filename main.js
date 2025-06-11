@@ -319,3 +319,37 @@ document.addEventListener("click", (e) => {
     container.classList.add("visible");
   }
 });
+
+
+document.getElementById("exploreBtn").addEventListener("click", async () => {
+  try {
+    const snapshot = await getDocs(collection(db, "points"));
+    const docs = snapshot.docs;
+
+    if (docs.length === 0) {
+      alert("Aucun point à explorer !");
+      return;
+    }
+
+    const randomDoc = docs[Math.floor(Math.random() * docs.length)];
+    const data = randomDoc.data();
+
+    map.setView([data.latitude+1, data.longitude], 7, { animate: true });
+
+    // Ouvrir le popup du point correspondant
+    setTimeout(() => {
+      map.eachLayer(layer => {
+        if (layer instanceof L.Marker) {
+          const { lat, lng } = layer.getLatLng();
+          if (Math.abs(lat - data.latitude) < 0.0001 && Math.abs(lng - data.longitude) < 0.0001) {
+            layer.openPopup();
+          }
+        }
+      });
+    }, 500);
+
+  } catch (err) {
+    console.error("Erreur lors de l'exploration :", err);
+    alert("Une erreur est survenue pendant l'exploration.");
+  }
+});
