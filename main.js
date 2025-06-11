@@ -334,7 +334,7 @@ document.getElementById("exploreBtn").addEventListener("click", async () => {
     const randomDoc = docs[Math.floor(Math.random() * docs.length)];
     const data = randomDoc.data();
 
-    map.setView([data.latitude+1, data.longitude], 7, { animate: true });
+    map.setView([data.latitude+0.5, data.longitude], 7, { animate: true });
 
     // Ouvrir le popup du point correspondant
     setTimeout(() => {
