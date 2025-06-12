@@ -39,19 +39,72 @@ toggleCountriesBtn.addEventListener("click", () => {
   toggleCountriesBtn.textContent = isHidden ? "Masquer la liste des pays" : "Afficher la liste des pays";
 });
 
-// 🔄 Liste des utilisateurs
-async function chargerUtilisateurs() {
+// Leaderboard des utilisateurs
+async function chargerUtilisateurs(sortBy = "alpha") {
   const snapshot = await getDocs(collection(db, "users"));
-  allUsers = [];
+  const pointsSnapshot = await getDocs(collection(db, "points"));
 
+  // Préparation des stats par utilisateur
+  const userStats = {};
+  pointsSnapshot.forEach(doc => {
+    const data = doc.data();
+    const userId = data.userId;
+    const lat = data.latitude;
+    const lng = data.longitude;
+
+    if (!userStats[userId]) {
+      userStats[userId] = { points: 0, countries: new Set() };
+    }
+
+    userStats[userId].points++;
+    userStats[userId].coords = userStats[userId].coords || [];
+    userStats[userId].coords.push({ lat, lng });
+  });
+
+  // Résolution des pays pour chaque utilisateur (en cache)
+  const userCountries = {};
+  for (const userId in userStats) {
+    const coords = userStats[userId].coords || [];
+    const countriesSet = new Set();
+
+    for (const coord of coords) {
+      try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${coord.lat}&lon=${coord.lng}&format=json`);
+        const result = await response.json();
+        const country = result.address?.country;
+        if (country) countriesSet.add(country);
+      } catch {}
+    }
+
+    userCountries[userId] = countriesSet;
+    userStats[userId].countries = countriesSet;
+  }
+
+  // Compilation
+  allUsers = [];
   snapshot.forEach(doc => {
     const data = doc.data();
+    const stats = userStats[doc.id] || { points: 0, countries: new Set() };
     allUsers.push({
       id: doc.id,
       username: data.username || data.email,
-      nickname: data.nickname || ""
+      nickname: data.nickname || "",
+      points: stats.points,
+      countriesCount: stats.countries.size
     });
   });
+
+  // Tri
+  switch (sortBy) {
+    case "points":
+      allUsers.sort((a, b) => b.points - a.points);
+      break;
+    case "countries":
+      allUsers.sort((a, b) => b.countriesCount - a.countriesCount);
+      break;
+    default:
+      allUsers.sort((a, b) => a.username.localeCompare(b.username));
+  }
 
   afficherUtilisateursFiltrés("");
 }
@@ -67,7 +120,10 @@ function afficherUtilisateursFiltrés(recherche) {
 
   filtres.forEach(user => {
     const li = document.createElement("li");
-    li.innerHTML = `<strong>${user.username}</strong>${user.nickname ? ` <span style="font-weight: normal;">(${user.nickname})</span>` : ""}`;
+    li.innerHTML = `
+      <strong>${user.username}</strong>${user.nickname ? ` <span style="font-weight: normal;">(${user.nickname})</span>` : ""}
+      <br/><small>📍 ${user.points} stickers - 🌍 ${user.countriesCount} pays</small>
+    `;
     li.style.cursor = "pointer";
     li.addEventListener("click", () => afficherPointsUtilisateur(user.id, user.username));
     userList.appendChild(li);
@@ -149,3 +205,8 @@ window.goBack = () => {
 // Init au chargement
 await afficherStatistiques();
 await chargerUtilisateurs();
+
+document.getElementById("sortSelect").addEventListener("change", async (e) => {
+  const sortBy = e.target.value;
+  await chargerUtilisateurs(sortBy);
+});

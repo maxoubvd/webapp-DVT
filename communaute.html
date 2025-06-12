@@ -18,6 +18,15 @@
 
       <input type="text" id="searchInput" placeholder="🔍 Rechercher un utilisateur..." style="width: 100%; padding: 10px; margin: 1rem 0; font-size: 1rem;" />
 
+      <div style="margin-bottom: 1rem;">
+        <label for="sortSelect"><strong>Trier par :</strong></label>
+        <select id="sortSelect" style="margin-left: 10px; padding: 5px;">
+          <option value="alpha">Ordre alphabétique</option>
+          <option value="points">Nombre de stickers</option>
+          <option value="countries">Nombre de pays visités</option>
+        </select>
+      </div>
+
       <ul id="userList"></ul>
 
       <div id="userPoints" class="hidden">
